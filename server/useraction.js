@@ -1,5 +1,6 @@
 const mysql = require('mysql')
 const con = require('./conn')
+const bcrypt = require('bcrypt')
 
 checkUserIndb = (email, con, callback) => {
     let result;
@@ -21,8 +22,8 @@ firstname varchar(255) not null,
 lastname varchar(255) not null,
 emailid varchar(255) not null unique,
 active boolean default false,
-password  varchar(25),
-vtoken varchar(25),
+password  varchar(255),
+vtoken varchar(255),
 primary key (userId)
 )`
     return con.query(sql, (err, res) => {
@@ -58,9 +59,10 @@ var statusofuser = (email, callback) => {
     })
 }
 
-var updatepassword = (email, password, callback) => {
-    var updatepasswordquery = `update user set password= ${password} where  emailid =${email}`
-    return con.query(updatepasswordquery, (err, result) => {
+var updatepassword = (userid, password, callback) => {
+    var hash = bcrypt.hashSync(password , 2);
+    let qry = `update user set password = "${hash}" where userid ="${userid}"`
+    return con.query(qry, (err, result) => {
         if (err) {
             callback(err, null)
         } else {
@@ -68,7 +70,18 @@ var updatepassword = (email, password, callback) => {
         }
     })
 }
-
+var passwordcheck = (email, password, callback)=>{
+  let getpasswordquery = `select password from user where emailid ="${email}"`
+  con.query(getpasswordquery, (err, result)=>{
+      if(err){
+          callback(err, null)
+      } else {
+           hash = result[0].password
+          let match =bcrypt.compareSync(password, hash)
+          callback(null, match)
+      }
+  })
+}
 var getuserbyemailid = (email, callback) => {
     let getquery = `select * from user where emailid ="${email}"`
     //  let getquery = `select firstname, active from user where emailid =${email}`
@@ -77,7 +90,6 @@ var getuserbyemailid = (email, callback) => {
             console.log(err)
             callback(err, null)
         } else {
-            console.log(result[0])
             callback(null, result)
         }
     })
@@ -115,7 +127,6 @@ var verifyToken = (userid, token, callback) => {
     })
 }
 var activateaccount = (userid, callback) => {
-    //console.log('reached there')
     let updatequery = `update user set active = true where userId =${userid}`
     return con.query(updatequery, (err, res) => {
         if (err) {
@@ -126,12 +137,14 @@ var activateaccount = (userid, callback) => {
     })
 }
 var verifyTokenusingmail = (email, token, callback)=>{
-    let gettokenquery = `select vtoken from user where emailid =${email}`
+    let gettokenquery = `select vtoken from user where emailid ="${email}"`
     return con.query(gettokenquery, (err, result)=>{
         if (err) {
             callback(err, null)
         } else {
-            vtoken = result[0]
+            vtoken = result[0].vtoken
+            console.log(token)
+            console.log(vtoken)
             if (vtoken == token ) {
                 let match  = true
                 callback (null ,match)
@@ -147,5 +160,8 @@ module.exports = {
     createTable: createTable,
     adduser: adduser,
     getuserbyemailid: getuserbyemailid,
-    verifyToken: verifyToken
+    verifyToken: verifyToken,
+    verifyTokenusingmail:verifyTokenusingmail,
+    updatepassword:updatepassword,
+    passwordcheck:passwordcheck
 }

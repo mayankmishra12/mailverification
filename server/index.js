@@ -10,8 +10,8 @@ const con = require('./conn')
 const config = require('./config/config')
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
-
+const jwt = require('./jwt-auth-token/jwt-web-token')
+tokenexpiretime = config.tokenexpiretime;
  con.connect(function(err) {
     if (err) throw err;
     console.log("db connected")
@@ -56,19 +56,23 @@ app.post ('/verify' , (req, res)=>{
       }
     })
 })
-app.post('./resetpassword', (req,res)=>{  
-let email= req.body.email
+app.post('/resetpassword', (req,res)=>{  
+    console.log(req.body)
+let userid= req.body.userid
 let token = req.body.token
 let password = req.body.password
-user.verifyTokenusingmail(email, token (err, result)=>{
+user.verifyToken(userid, token, (err, result)=>{
     if (err) {
+        console.log(err)
         res.status(500).send()
     } else {
-        if (!result ) {
+        console.log(result)
+        if (!result )  {
             res.status(403).send('password reset link been expired')
         } else {
-            user.updatepassword(email,password, (err,result)=>{
+            user.updatepassword(userid,password, (err,result)=>{
                 if(err) {
+                    console.log(err)
                     res.status(500).send()
                 } else {
                    res.send( 'password has been succefully reset')
@@ -77,6 +81,30 @@ user.verifyTokenusingmail(email, token (err, result)=>{
         }
     }
 })
+})
+app.post ('/login', (req,res)=>{
+    email = req.body.email
+    password = req.body.password
+    user.passwordcheck(email,password,(err,match)=>{
+        if (err) {
+            console.log(err)
+        } else {
+            if (match) {
+                let payload = {
+                    user :email
+                }
+               try {
+                let token = jwt.createToken(payload,tokenexpiretime )
+                res.send(token)
+               } catch(err) {
+                  console.log(err)
+                  res.send(token)
+               }
+            } else {
+                res.send("incorrect password")
+            }
+        }
+    })
 })
 app.post('/signup', function (req,res){
     let firstname = req.body.firstname

@@ -4,8 +4,8 @@ var smtpConfig = {
     port: 465,
     secure: true, // use SSL
     auth: {
-        user : 'xyz@gmail.com',
-        pass :'xyz' 
+        user : 'mayanksiliguri@gmail.com',
+        pass :'Myk@1234' 
     }
 };
 module.exports = {
